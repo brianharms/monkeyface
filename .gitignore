@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.cache/
+weather_cache/
+.pytest_cache/
+.DS_Store
