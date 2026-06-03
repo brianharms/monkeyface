@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>monkeyface — strawberry defect risk explorer</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin="anonymous"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+          crossorigin="anonymous"></script>
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"
+          integrity="sha384-7TVmlZWH60iKX5Uk7lSvQhjtcgw2tkFjuwLcXoRSR4zXTyWFJRm9aPAguMh7CIra"
+          crossorigin="anonymous"></script>
+</head>
+<body>
+  <h1>monkeyface</h1>
+  <div class="sub">Strawberry monkey-face / cat-face defect risk explorer · Phase A</div>
+  <span id="banner" class="sim">DATA: SIMULATED</span>
+
+  <div class="panel">
+    <strong>1. Upload field data</strong> (CSV/Excel: lot, field, lat, lon, harvest date)
+    <div style="margin-top:10px;">
+      <input type="file" id="file" accept=".csv,.xlsx,.xls">
+      <button id="loadCols">Load columns</button>
+    </div>
+    <div id="mapping" style="margin-top:12px;"></div>
+    <button id="run" style="margin-top:12px;" disabled>Run analysis</button>
+    <div id="status" class="note"></div>
+  </div>
+
+  <div class="map-row">
+    <div class="panel"><strong>Fields</strong><div id="map" style="margin-top:10px;"></div></div>
+    <div class="panel"><strong>Factor ranking</strong><div id="factors"></div></div>
+  </div>
+
+  <div class="panel"><strong>Could we have seen the spike?</strong><div id="spike"></div></div>
+
+  <div class="grid">
+    <div class="panel"><strong>Defect vs. factor</strong><div id="scatter"></div></div>
+    <div class="panel"><strong>Weather (selected field's bloom window)</strong><div id="weather"></div></div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
