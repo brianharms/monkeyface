@@ -60,6 +60,16 @@ def test_normalize_flags_bad_coordinates():
     assert any("lat" in e.lower() for e in errors)
 
 
+def test_normalize_rejects_duplicate_lot_ids():
+    df = _df([
+        {"lot_id": "L1", "field_id": "F1", "lat": 1.0, "lon": 2.0, "harvest_date": "2024-05-01"},
+        {"lot_id": "L1", "field_id": "F2", "lat": 3.0, "lon": 4.0, "harvest_date": "2024-05-02"},
+    ])
+    mapping = {c: c for c in ["lot_id", "field_id", "lat", "lon", "harvest_date"]}
+    with pytest.raises(IngestError):
+        normalize(df, mapping)
+
+
 def test_load_table_reads_csv_bytes():
     csv = b"lot_id,field_id,lat,lon,harvest_date\nL1,F1,36.9,-121.7,2024-05-01\n"
     df = load_table(csv, filename="x.csv")

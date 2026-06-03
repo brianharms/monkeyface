@@ -78,6 +78,16 @@ def normalize(df: pd.DataFrame, mapping: dict, return_errors: bool = False):
         except Exception as e:  # noqa: BLE001 - row-level, reported not raised
             errors.append(f"row {i}: {e}")
 
+    # duplicate lot_ids collapse silently downstream (pipeline keys by lot_id).
+    # This is a structural problem, not a per-row one: raise in both modes.
+    seen, dupes = set(), []
+    for r in records:
+        if r.lot_id in seen and r.lot_id not in dupes:
+            dupes.append(r.lot_id)
+        seen.add(r.lot_id)
+    if dupes:
+        raise IngestError(f"duplicate lot_id(s): {dupes}")
+
     if return_errors:
         return records, errors
     return records

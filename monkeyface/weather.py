@@ -34,14 +34,27 @@ def _parse_power(payload: dict) -> list[dict]:
     dates = sorted(param["T2M_MIN"].keys())
     out = []
     for d in dates:
+        values = (
+            float(param["T2M_MIN"][d]),
+            float(param["T2M_MAX"][d]),
+            float(param["T2M"][d]),
+            float(param["PRECTOTCORR"][d]),
+            float(param["RH2M"][d]),
+            float(param["WS2M"][d]),
+        )
+        # NASA POWER returns -999.0 as the fill value for missing data
+        # (HTTP 200, not an error). Drop any day where ANY param is fill.
+        if any(v <= -998 for v in values):
+            continue
+        t2m_min, t2m_max, t2m, precip_mm, rh, wind = values
         out.append({
             "date": date(int(d[:4]), int(d[4:6]), int(d[6:8])),
-            "t2m_min": float(param["T2M_MIN"][d]),
-            "t2m_max": float(param["T2M_MAX"][d]),
-            "t2m": float(param["T2M"][d]),
-            "precip_mm": float(param["PRECTOTCORR"][d]),
-            "rh": float(param["RH2M"][d]),
-            "wind": float(param["WS2M"][d]),
+            "t2m_min": t2m_min,
+            "t2m_max": t2m_max,
+            "t2m": t2m,
+            "precip_mm": precip_mm,
+            "rh": rh,
+            "wind": wind,
         })
     return out
 

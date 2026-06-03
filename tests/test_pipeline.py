@@ -45,6 +45,47 @@ def test_pipeline_real_mode_uses_provided_defect_rate():
     config.DATA_MODE = "simulated"  # restore
 
 
+def test_pipeline_flags_and_excludes_empty_weather_lots():
+    config.DATA_MODE = "simulated"
+    recs = [LotRecord(lot_id=f"L{i}", field_id=f"F{i}", lat=36.9, lon=-121.7,
+                      harvest_date=date(2024, 6, 15), grower="G") for i in range(5)]
+
+    def _mixed(lat, lon, start, end):
+        # one lot (the 3rd call) returns empty; others return data
+        _mixed.calls += 1
+        if _mixed.calls == 3:
+            return []
+        import numpy as np
+        rng = np.random.default_rng(_mixed.calls)
+        return [{"date": date(2024, 5, d), "t2m_min": float(rng.uniform(2, 12)),
+                 "t2m_max": float(rng.uniform(18, 33)), "t2m": 15.0,
+                 "precip_mm": float(rng.uniform(0, 6)), "rh": 70.0, "wind": 2.0}
+                for d in range(1, 30)]
+    _mixed.calls = 0
+
+    with patch("monkeyface.weather.fetch_weather", side_effect=_mixed):
+        result = run_pipeline(recs)
+    assert len(result["lots"]) == 4              # one excluded
+    assert len(result["weather_warnings"]) == 1  # and flagged
+    config.DATA_MODE = "simulated"
+
+
+def test_pipeline_real_mode_missing_defect_rate_raises():
+    import pytest
+    config.DATA_MODE = "real"
+    recs = [LotRecord(lot_id="L1", field_id="F1", lat=36.9, lon=-121.7,
+                      harvest_date=date(2024, 6, 15), defect_rate=None)]
+
+    def _daily(*a, **k):
+        return [{"date": date(2024, 5, d), "t2m_min": 5.0, "t2m_max": 20.0,
+                 "t2m": 12.0, "precip_mm": 0.0, "rh": 70.0, "wind": 2.0}
+                for d in range(1, 30)]
+    with patch("monkeyface.weather.fetch_weather", side_effect=_daily):
+        with pytest.raises(ValueError):
+            run_pipeline(recs)
+    config.DATA_MODE = "simulated"
+
+
 @pytest.mark.slow
 def test_pipeline_live_nasa_power_one_field():
     """Opt-in: hits the real NASA POWER API. Run with: pytest -m slow"""
