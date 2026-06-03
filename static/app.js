@@ -4,6 +4,9 @@ let lastResult = null;
 
 const $ = (id) => document.getElementById(id);
 
+// HTML-escape any value before interpolating into innerHTML / popup strings.
+const esc = (s) => { const d = document.createElement("div"); d.textContent = String(s ?? ""); return d.innerHTML; };
+
 $("loadCols").onclick = async () => {
   const f = $("file").files[0];
   if (!f) { $("status").textContent = "Choose a file first."; return; }
@@ -34,8 +37,8 @@ function buildMapping(columns) {
       .concat(CANONICAL.map((cn) =>
         `<option value="${cn}" ${guess(col) === cn ? "selected" : ""}>${cn}</option>`))
       .join("");
-    return `<div class="mapping-row"><label>${col}</label>
-            <select data-src="${col}">${opts}</select></div>`;
+    return `<div class="mapping-row"><label>${esc(col)}</label>
+            <select data-src="${esc(col)}">${opts}</select></div>`;
   }).join("");
   $("mapping").innerHTML = html;
 }
@@ -83,7 +86,7 @@ function renderMap(lots) {
     const color = `rgb(${Math.round(120 + 135 * t)},${Math.round(180 - 140 * t)},90)`;
     L.circleMarker([l.lat, l.lon], { radius: 8, color, fillColor: color,
       fillOpacity: 0.8 })
-      .bindPopup(`<b>${l.field_id}</b><br>lot ${l.lot_id}<br>` +
+      .bindPopup(`<b>${esc(l.field_id)}</b><br>lot ${esc(l.lot_id)}<br>` +
                  `defect ${(100 * (l.defect_rate || 0)).toFixed(1)}%`)
       .on("click", () => renderWeather(l))
       .addTo(layer);
@@ -92,12 +95,12 @@ function renderMap(lots) {
 
 function renderFactors(a) {
   const rows = a.factors.map((f) =>
-    `<tr><td>${f.name}</td>
-     <td>${f.direction}</td>
+    `<tr><td>${esc(f.name)}</td>
+     <td>${esc(f.direction)}</td>
      <td>${f.std_effect.toFixed(4)}</td>
      <td>r=${f.corr.toFixed(2)} [${f.ci_low.toFixed(2)}, ${f.ci_high.toFixed(2)}]</td>
-     <td class="${f.confidence}">${f.confidence}</td></tr>`).join("");
-  let note = a.notes.map((n) => `<div class="note">${n}</div>`).join("");
+     <td class="${esc(f.confidence)}">${esc(f.confidence)}</td></tr>`).join("");
+  let note = a.notes.map((n) => `<div class="note">${esc(n)}</div>`).join("");
   $("factors").innerHTML =
     `<table><tr><th>factor</th><th>dir</th><th>effect</th><th>corr (95% CI)</th>
      <th>confidence</th></tr>${rows}</table>${note}` +
@@ -108,10 +111,10 @@ function renderFactors(a) {
 function renderSpike(s) {
   if (!s) { $("spike").textContent = "No multi-year data to assess a spike."; return; }
   const af = s.anomalous_factors.map((a) =>
-    `<li>${a.factor}: ${a.z > 0 ? "+" : ""}${a.z}σ vs normal ` +
-    `(${a.spike_mean} vs ${a.overall_mean})</li>`).join("");
+    `<li>${esc(a.factor)}: ${a.z > 0 ? "+" : ""}${esc(a.z)}σ vs normal ` +
+    `(${esc(a.spike_mean)} vs ${esc(a.overall_mean)})</li>`).join("");
   $("spike").innerHTML =
-    `<p>Highest-defect year: <b>${s.year}</b> ` +
+    `<p>Highest-defect year: <b>${esc(s.year)}</b> ` +
     `(mean defect ${(100 * s.defect_rate).toFixed(1)}%).</p>` +
     `<p>Conditions that were anomalous that year:</p><ul>${af || "<li>none ≥1σ</li>"}</ul>`;
 }
