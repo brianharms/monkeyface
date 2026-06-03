@@ -1,5 +1,6 @@
 from datetime import date
 from unittest.mock import patch
+import pytest
 from monkeyface.pipeline import run_pipeline
 from monkeyface.schema import LotRecord
 import config
@@ -42,3 +43,18 @@ def test_pipeline_real_mode_uses_provided_defect_rate():
         result = run_pipeline(recs)
     assert all(lot["defect_rate"] == 0.1 for lot in result["lots"])
     config.DATA_MODE = "simulated"  # restore
+
+
+@pytest.mark.slow
+def test_pipeline_live_nasa_power_one_field():
+    """Opt-in: hits the real NASA POWER API. Run with: pytest -m slow"""
+    import config
+    config.DATA_MODE = "simulated"
+    recs = [LotRecord(lot_id="L1", field_id="Watsonville", lat=36.9102,
+                      lon=-121.7569, harvest_date=date(2024, 5, 20),
+                      grower="CoastalBerry")]
+    result = run_pipeline(recs)
+    assert len(result["lots"]) == 1
+    w = result["lots"][0]["weather"]
+    assert len(w) > 20                      # ~35-day window of daily data
+    assert all("t2m_min" in d for d in w)   # real parsed weather
