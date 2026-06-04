@@ -27,6 +27,14 @@ def run_pipeline(records: list[LotRecord]) -> dict:
         dropped = set(weather_warnings)
         records = [r for r in records if r.lot_id not in dropped]
 
+    # If every lot was dropped (e.g. all harvest dates in the future, so no
+    # weather exists yet), there is nothing to analyze. Fail clearly instead of
+    # crashing deep inside the analysis with an opaque error.
+    if not records:
+        raise ValueError(
+            "no weather data available for any field — harvest dates may be in "
+            "the future, or no field had usable weather in its bloom window")
+
     # 3. features
     feature_rows = []
     for r in records:

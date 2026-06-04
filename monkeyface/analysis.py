@@ -94,10 +94,17 @@ def analyze(rows: list[dict]) -> AnalysisResult:
 
 
 def _spike_explainer(df: pd.DataFrame, feature_cols: list[str]) -> dict | None:
-    """Identify the highest-defect year and which factors were anomalous then."""
+    """Identify the highest-defect year and which factors were anomalous then.
+
+    Returns None when there is no cross-year comparison to make (no dates, or
+    only a single year), so the UI shows the honest "only one year" message
+    instead of a fabricated comparison where every z-score is structurally 0.
+    """
     if df["harvest_date"].isna().all():
         return None
     years = pd.to_datetime(df["harvest_date"]).dt.year
+    if years.nunique() < 2:
+        return None
     by_year_defect = df.groupby(years)["defect_rate"].mean()
     if by_year_defect.empty:
         return None

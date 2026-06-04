@@ -1,4 +1,4 @@
-import io
+import base64
 from unittest.mock import patch
 from datetime import date
 from fastapi.testclient import TestClient
@@ -22,26 +22,49 @@ def test_index_served():
     assert "monkeyface" in resp.text.lower()
 
 
-def test_columns_endpoint_returns_headers():
-    csv = b"Lot,Field,Lat,Lon,Harvested\nL1,F1,36.9,-121.7,2024-06-15\n"
-    resp = client.post("/api/columns",
-                       files={"file": ("x.csv", csv, "text/csv")})
+def test_format_endpoint_normalizes_messy_file():
+    # Messy headers that the formatter should map to canonical columns.
+    csv = (b"Lot #,Ranch,Latitude,Longitude,Pick Date,Grower\n"
+           b"L1,North,36.9,-121.7,05/20/2024,Acme\n"
+           b"L2,South,34.9,-120.4,06/03/2024,Acme\n")
+    resp = client.post("/api/format",
+                       files={"files": ("raw.csv", csv, "text/csv")})
     assert resp.status_code == 200
-    assert resp.json()["columns"] == ["Lot", "Field", "Lat", "Lon", "Harvested"]
+    f = resp.json()["files"][0]
+    assert f["ok"] is True
+    assert f["report"]["rows_out"] == 2
+    clean = base64.b64decode(f["csv_b64"]).decode()
+    header = clean.splitlines()[0].split(",")
+    assert "lot_id" in header and "harvest_date" in header and "lat" in header
 
 
-def test_analyze_endpoint_runs_pipeline():
+def test_format_endpoint_reports_unformattable_file():
+    csv = b"colA,colB\n1,2\n"  # no recognizable required columns
+    resp = client.post("/api/format",
+                       files={"files": ("junk.csv", csv, "text/csv")})
+    assert resp.status_code == 200
+    f = resp.json()["files"][0]
+    assert f["ok"] is False
+    assert "required" in f["error"].lower()
+
+
+def test_analyze_accepts_canonical_file():
     rows = "lot_id,field_id,lat,lon,harvest_date,grower\n" + "\n".join(
         f"L{i},F{i},36.9,-121.7,2024-06-15,G{i%3}" for i in range(60))
-    mapping = {c: c for c in ["lot_id", "field_id", "lat", "lon",
-                              "harvest_date", "grower"]}
-    import json
     with patch("monkeyface.weather.fetch_weather", side_effect=_fake_daily):
         resp = client.post("/api/analyze",
-            files={"file": ("x.csv", rows.encode(), "text/csv")},
-            data={"mapping": json.dumps(mapping)})
+            files={"file": ("clean.csv", rows.encode(), "text/csv")})
     assert resp.status_code == 200
     body = resp.json()
     assert body["data_mode"] == "simulated"
     assert len(body["lots"]) == 60
     assert len(body["analysis"]["factors"]) >= 5
+
+
+def test_analyze_rejects_unformatted_file():
+    # Missing required canonical columns -> clear 400, not a guess.
+    csv = b"Lot #,Ranch,Latitude\nL1,North,36.9\n"
+    resp = client.post("/api/analyze",
+                       files={"file": ("raw.csv", csv, "text/csv")})
+    assert resp.status_code == 400
+    assert "not formatted" in resp.json()["detail"].lower()

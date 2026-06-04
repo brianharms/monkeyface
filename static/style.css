@@ -133,6 +133,50 @@ body {
 }
 .panel--upload .panel__title::before { background: var(--navy); }
 
+/* ---------- Mode switch (Analyze / Format) ---------- */
+.mode-switch {
+  display: inline-flex; gap: 4px; padding: 4px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 100px; margin-bottom: 18px;
+}
+.mode-tab {
+  background: none; color: var(--ink-2); box-shadow: none;
+  border-radius: 100px; padding: 7px 18px; font-size: 13px; font-weight: 600;
+}
+.mode-tab:hover { background: rgba(0,0,0,.03); color: var(--navy); }
+.mode-tab.is-active { background: var(--navy); color: #fff; }
+.mode-tab.is-active:hover { background: var(--navy); }
+
+/* clickable uploaded-file link */
+.file-link {
+  font-size: 13px; font-weight: 600; color: var(--navy-600);
+  text-decoration: underline; text-underline-offset: 3px; margin-left: 4px;
+}
+.file-link:hover { color: var(--navy); }
+.link-inline { display: inline; padding: 0; font-size: inherit; vertical-align: baseline; }
+
+/* ---------- Format results ---------- */
+#formatStatus { margin-top: 12px; font-size: 13px; font-weight: 500; color: var(--navy); }
+.fmt-list {
+  margin-top: 12px; max-width: 620px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden;
+}
+.fmt-row {
+  display: grid; grid-template-columns: 1fr auto auto; gap: 14px; align-items: center;
+  padding: 11px 14px; font-size: 13px;
+}
+.fmt-row + .fmt-row { border-top: 1px solid var(--border); }
+.fmt-row--bad { background: var(--red-tint); grid-template-columns: 1fr auto; }
+.fmt-name { font-family: var(--mono); font-size: 12.5px; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fmt-detail { color: var(--ink-2); font-size: 12px; white-space: nowrap; }
+.fmt-error { color: var(--red); font-weight: 600; }
+.fmt-dl {
+  font-size: 12.5px; font-weight: 600; color: #fff; background: var(--navy);
+  padding: 6px 12px; border-radius: var(--radius-sm); text-decoration: none; white-space: nowrap;
+}
+.fmt-dl:hover { background: var(--navy-700); }
+
 /* ---------- Stepped flow ---------- */
 .steps { list-style: none; }
 .step[hidden] { display: none; }

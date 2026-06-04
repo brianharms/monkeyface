@@ -1,15 +1,3 @@
-// Canonical field key -> the plain-language name shown to the user.
-const CANONICAL_LABELS = {
-  lot_id: "Lot ID",
-  field_id: "Field name",
-  lat: "Latitude",
-  lon: "Longitude",
-  harvest_date: "Harvest date",
-  defect_rate: "Defect rate",
-  grower: "Grower",
-  variety: "Variety",
-};
-const CANONICAL = Object.keys(CANONICAL_LABELS);
 let lastResult = null;
 
 const $ = (id) => document.getElementById(id);
@@ -17,122 +5,57 @@ const $ = (id) => document.getElementById(id);
 // HTML-escape any value before interpolating into innerHTML / popup strings.
 const esc = (s) => { const d = document.createElement("div"); d.textContent = String(s ?? ""); return d.innerHTML; };
 
-$("loadCols").onclick = async () => {
+// ---------------------------------------------------------------------------
+// Mode switching: Analyze  <->  Format files
+// ---------------------------------------------------------------------------
+function setMode(mode) {
+  const analyze = mode === "analyze";
+  $("analyzeMode").hidden = !analyze;
+  $("formatMode").hidden = analyze;
+  $("tabAnalyze").classList.toggle("is-active", analyze);
+  $("tabFormat").classList.toggle("is-active", !analyze);
+}
+$("tabAnalyze").onclick = () => setMode("analyze");
+$("tabFormat").onclick = () => setMode("format");
+$("goFormat").onclick = () => setMode("format");
+
+// ---------------------------------------------------------------------------
+// Analyze flow: pick a formatted file -> unlock step 2 -> analyze
+// ---------------------------------------------------------------------------
+let fileObjectUrl = null;
+$("file").onchange = () => {
   const f = $("file").files[0];
-  if (!f) { $("status").textContent = "Please choose a file in Step 1 first."; return; }
-  $("loadCols").disabled = true;
-  $("loadCols").textContent = "Reading…";
-  const fd = new FormData(); fd.append("file", f);
-  const r = await fetch("/api/columns", { method: "POST", body: fd });
-  $("loadCols").disabled = false;
-  $("loadCols").innerHTML = "Continue&nbsp;&rarr;";
-  if (!r.ok) { $("status").textContent = "Sorry — we couldn't read that file. Is it a CSV or Excel file?"; return; }
-  const { columns } = await r.json();
-  buildMapping(columns);
-  renderMapSummary();
-  // Unlock steps 2 and 3 now that there's something to map and run.
+  const link = $("fileLink");
+  if (fileObjectUrl) { URL.revokeObjectURL(fileObjectUrl); fileObjectUrl = null; }
+  if (!f) { link.hidden = true; $("step2").classList.add("is-locked"); $("run").disabled = true; return; }
+  // Make the chosen file clickable to open in a new tab.
+  fileObjectUrl = URL.createObjectURL(f);
+  link.href = fileObjectUrl;
+  link.textContent = "Open “" + f.name + "”";
+  link.download = f.name;
+  link.hidden = false;
+  // Unlock step 2.
   $("step2").classList.remove("is-locked");
-  $("step3").classList.remove("is-locked");
   $("run").disabled = false;
-  $("step2").scrollIntoView({ behavior: "smooth", block: "nearest" });
-};
-
-function guess(col) {
-  const c = col.toLowerCase().trim();
-  // exact-name match first (strongest signal)
-  if (CANONICAL.includes(c)) return c;
-  if (c === "longitude") return "lon";
-  if (c === "latitude") return "lat";
-  // fuzzy keyword match
-  if (c.includes("lot")) return "lot_id";
-  if (c.includes("field") || c.includes("ranch") || c.includes("block")) return "field_id";
-  if (c.startsWith("lat")) return "lat";
-  if (c.startsWith("lon") || c.includes("lng") || c.includes("long")) return "lon";
-  if (c.includes("harv") || c.includes("date") || c.includes("pick")) return "harvest_date";
-  if (c.includes("defect") || c.includes("catface") || c.includes("monkey")) return "defect_rate";
-  if (c.includes("grow") || c.includes("supplier") || c.includes("vendor")) return "grower";
-  if (c.includes("variet") || c.includes("cultivar")) return "variety";
-  return "";
-}
-
-// Build the (hidden by default) editable dropdown rows, one per source column.
-function buildMapping(columns) {
-  const html = columns.map((col) => {
-    const opts = ['<option value="">— don’t use this column —</option>']
-      .concat(CANONICAL.map((cn) =>
-        `<option value="${cn}" ${guess(col) === cn ? "selected" : ""}>${CANONICAL_LABELS[cn]}</option>`))
-      .join("");
-    return `<div class="mapping-row">
-            <span class="mapping-row__src" title="${esc(col)}">${esc(col)}</span>
-            <span class="mapping-row__arrow">&larr;</span>
-            <select data-src="${esc(col)}">${opts}</select></div>`;
-  }).join("");
-  $("mapping").innerHTML = html;
-  // Keep the summary live as the user edits matches.
-  $("mapping").querySelectorAll("select").forEach((s) => { s.onchange = renderMapSummary; });
-}
-
-// Read the current mapping (canonical field -> source column) from the editor.
-function currentMapping() {
-  const m = {};
-  $("mapping").querySelectorAll("select").forEach((s) => {
-    if (s.value) m[s.value] = s.dataset.src;   // canonical -> source column
-  });
-  return m;
-}
-
-const REQUIRED_FIELDS = ["lot_id", "field_id", "lat", "lon", "harvest_date"];
-
-// Render the plain, stacked "Field  →  your column" summary.
-function renderMapSummary() {
-  const m = currentMapping();
-  let missing = 0;
-  const rows = CANONICAL.map((cn) => {
-    const src = m[cn];
-    const required = REQUIRED_FIELDS.includes(cn);
-    if (!src && required) missing++;
-    const val = src
-      ? `<span class="ms-col">${esc(src)}</span>`
-      : required
-      ? `<span class="ms-missing">not found &mdash; please fix</span>`
-      : `<span class="ms-none">not provided</span>`;
-    if (!src && !required) return "";   // hide optional-and-absent fields from the summary
-    return `<div class="ms-row${!src && required ? " ms-row--bad" : ""}">
-              <span class="ms-label">${CANONICAL_LABELS[cn]}${required ? "" : " <em>(optional)</em>"}</span>
-              <span class="ms-arrow">&rarr;</span>${val}</div>`;
-  }).join("");
-  $("mapSummary").innerHTML = rows;
-  $("toggleMapping").hidden = false;
-  // Block running until every required field is matched.
-  $("run").disabled = missing > 0;
-  $("status").textContent = missing > 0
-    ? `${missing} required column${missing === 1 ? "" : "s"} couldn't be matched — click "Fix matches" to set ${missing === 1 ? "it" : "them"}.`
-    : "";
-}
-
-$("toggleMapping").onclick = () => {
-  const ed = $("mappingEditor");
-  ed.hidden = !ed.hidden;
-  $("toggleMapping").innerHTML = ed.hidden ? "Fix matches&nbsp;&darr;" : "Done editing&nbsp;&uarr;";
+  $("status").textContent = "";
 };
 
 $("run").onclick = async () => {
   const f = $("file").files[0];
-  // Backend expects { sourceColumn: canonicalField } (df.rename mapping).
-  const mapping = {};
-  $("mapping").querySelectorAll("select").forEach((s) => {
-    if (s.value) mapping[s.dataset.src] = s.value;
-  });
+  if (!f) { $("status").textContent = "Choose a formatted file first."; return; }
   const fd = new FormData();
   fd.append("file", f);
-  fd.append("mapping", JSON.stringify(mapping));
   $("status").textContent = "Fetching each field's weather and analyzing… (the first run takes a few seconds)";
   $("run").disabled = true;
   $("run").textContent = "Analyzing…";
   const r = await fetch("/api/analyze", { method: "POST", body: fd });
   $("run").disabled = false;
   $("run").textContent = "Analyze fields";
-  if (!r.ok) { const e = await r.json(); $("status").textContent = "Couldn't analyze: " + (e.detail || "unknown error"); return; }
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    $("status").innerHTML = "Couldn't analyze: " + esc(e.detail || "unknown error");
+    return;
+  }
   lastResult = await r.json();
   $("status").textContent = `Done — analyzed ${lastResult.lots.length} ${lastResult.lots.length === 1 ? "field" : "fields"}. Results are below.`;
   // Reveal results FIRST so the map/charts size themselves against a visible container.
@@ -140,6 +63,56 @@ $("run").onclick = async () => {
   render(lastResult);
   $("results").scrollIntoView({ behavior: "smooth", block: "start" });
 };
+
+// ---------------------------------------------------------------------------
+// Format flow: pick many raw files -> normalize -> download clean set
+// ---------------------------------------------------------------------------
+$("formatFiles").onchange = () => {
+  $("runFormat").disabled = $("formatFiles").files.length === 0;
+  $("formatResults").innerHTML = "";
+  $("formatStatus").textContent = "";
+};
+
+$("runFormat").onclick = async () => {
+  const files = $("formatFiles").files;
+  if (!files.length) return;
+  const fd = new FormData();
+  for (const f of files) fd.append("files", f);
+  $("runFormat").disabled = true;
+  $("runFormat").textContent = "Formatting…";
+  $("formatStatus").textContent = `Formatting ${files.length} file${files.length === 1 ? "" : "s"}…`;
+  const r = await fetch("/api/format", { method: "POST", body: fd });
+  $("runFormat").disabled = false;
+  $("runFormat").textContent = "Format files";
+  if (!r.ok) { $("formatStatus").textContent = "Something went wrong formatting those files."; return; }
+  const { files: results } = await r.json();
+  renderFormatResults(results);
+};
+
+function renderFormatResults(results) {
+  const ok = results.filter((r) => r.ok);
+  $("formatStatus").textContent =
+    `${ok.length} of ${results.length} file${results.length === 1 ? "" : "s"} formatted.` +
+    (ok.length ? " Download the clean files, then switch to Analyze." : "");
+  const rows = results.map((r) => {
+    if (!r.ok) {
+      return `<div class="fmt-row fmt-row--bad">
+        <span class="fmt-name">${esc(r.name)}</span>
+        <span class="fmt-detail fmt-error">${esc(r.error)}</span></div>`;
+    }
+    const rep = r.report;
+    const dropped = rep.dropped_bad_dates + rep.dropped_bad_coords + rep.dropped_duplicates;
+    const cleanName = r.name.replace(/\.(csv|xlsx?|xls)$/i, "") + "_formatted.csv";
+    const href = "data:text/csv;base64," + r.csv_b64;
+    const note = dropped ? ` · ${dropped} row${dropped === 1 ? "" : "s"} dropped` : "";
+    return `<div class="fmt-row">
+      <span class="fmt-name">${esc(r.name)}</span>
+      <span class="fmt-detail">${rep.rows_out}/${rep.rows_in} rows${esc(note)}</span>
+      <a class="fmt-dl" href="${href}" download="${esc(cleanName)}">Download CSV</a></div>`;
+  }).join("");
+  $("formatResults").innerHTML = `<div class="fmt-list">${rows}</div>`;
+}
+
 
 function render(res) {
   const banner = $("banner");

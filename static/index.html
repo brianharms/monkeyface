@@ -41,64 +41,71 @@
 
   <div class="wrap">
     <section class="intro">
-      <h1>Which weather conditions cause the strawberry defect?</h1>
+      <h1>Which weather conditions line up with the strawberry defect?</h1>
       <p class="intro__lead">
         Strawberries sometimes grow deformed &mdash; a defect called <strong>monkey-face</strong>
         (or cat-face). This tool checks the real weather each field experienced while its fruit
-        was forming, then shows which conditions line up with more defects &mdash; so you can tell
-        whether a bad season could have been seen coming, and which suppliers to watch.
+        was forming, then shows which conditions are associated with more defects &mdash; so you
+        can tell whether a bad season could have been seen coming, and which suppliers to watch.
       </p>
       <p class="intro__how">
-        <strong>How it works:</strong> you give it a spreadsheet of fields (where and when each
-        was harvested); it pulls that field's actual weather automatically and finds the patterns.
-        No weather data needed on your end.
+        <strong>How it works:</strong> first <em>format</em> your field exports into one clean
+        layout, then <em>analyze</em> them &mdash; the tool pulls each field's actual weather
+        automatically and finds the patterns. No weather data needed on your end.
       </p>
       <span id="banner" class="sim">Data: Simulated</span>
     </section>
 
-    <section class="panel panel--upload">
+    <div class="mode-switch" role="tablist">
+      <button class="mode-tab is-active" id="tabAnalyze" role="tab">Analyze</button>
+      <button class="mode-tab" id="tabFormat" role="tab">Format files</button>
+    </div>
+
+    <!-- ANALYZE MODE -->
+    <section class="panel panel--upload" id="analyzeMode">
       <ol class="steps">
         <li class="step">
           <div class="step__head"><span class="step__num">1</span>
-            <span class="step__title">Upload your field data</span></div>
+            <span class="step__title">Upload a formatted field file</span></div>
           <div class="step__body">
-            <p class="step__hint">A CSV or Excel file with one row per lot &mdash; including the
-              field's location (latitude &amp; longitude) and its harvest date.</p>
+            <p class="step__hint">A formatted CSV (run raw exports through
+              <button type="button" class="link-button link-inline" id="goFormat">Format files</button>
+              first). One row per lot, with location and harvest date.</p>
             <div class="upload-row">
               <input type="file" id="file" accept=".csv,.xlsx,.xls">
-              <button id="loadCols">Continue&nbsp;&rarr;</button>
+              <a id="fileLink" class="file-link" hidden target="_blank" rel="noopener">Open file</a>
             </div>
           </div>
         </li>
 
         <li class="step is-locked" id="step2">
           <div class="step__head"><span class="step__num">2</span>
-            <span class="step__title">Confirm your columns</span></div>
-          <div class="step__body">
-            <p class="step__hint">We matched your spreadsheet columns automatically.
-              Review the matches below &mdash; you only need to step in if something looks off.</p>
-            <div id="mapSummary" class="map-summary"></div>
-            <button type="button" id="toggleMapping" class="link-button" hidden>Fix matches&nbsp;&darr;</button>
-            <div id="mappingEditor" hidden>
-              <div class="mapping-head">
-                <span>We'll read it as</span><span class="mapping-head__arrow">&rarr;</span><span>Your column</span>
-              </div>
-              <div id="mapping" class="mapping-grid"></div>
-            </div>
-          </div>
-        </li>
-
-        <li class="step is-locked" id="step3">
-          <div class="step__head"><span class="step__num">3</span>
             <span class="step__title">Run the analysis</span></div>
           <div class="step__body">
             <p class="step__hint">We'll fetch each field's weather and rank the conditions
-              driving the defect. The first run takes a few seconds.</p>
+              associated with the defect. The first run takes a few seconds.</p>
             <button id="run" disabled>Analyze fields</button>
             <div id="status"></div>
           </div>
         </li>
       </ol>
+    </section>
+
+    <!-- FORMAT MODE -->
+    <section class="panel panel--upload" id="formatMode" hidden>
+      <div class="step__head"><span class="step__num">&#9881;</span>
+        <span class="step__title">Format raw exports into one clean layout</span></div>
+      <div class="step__body">
+        <p class="step__hint">Select one or many raw spreadsheets (CSV or Excel) &mdash; messy
+          column names are fine. We match each file to the standard columns, clean the rows, and
+          give you tidy files ready to analyze.</p>
+        <div class="upload-row">
+          <input type="file" id="formatFiles" accept=".csv,.xlsx,.xls" multiple>
+          <button id="runFormat" disabled>Format files</button>
+        </div>
+        <div id="formatStatus"></div>
+        <div id="formatResults"></div>
+      </div>
     </section>
 
     <div id="results" hidden>

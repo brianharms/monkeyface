@@ -23,11 +23,18 @@ def load_table(data: bytes, filename: str) -> pd.DataFrame:
 
 
 def _parse_date(value) -> date:
+    if value is None or (not isinstance(value, (datetime, date)) and pd.isna(value)):
+        raise ValueError("missing harvest_date")
     if isinstance(value, (datetime, pd.Timestamp)):
+        if pd.isna(value):
+            raise ValueError("missing harvest_date")
         return value.date()
     if isinstance(value, date):
         return value
-    return pd.to_datetime(str(value)).date()
+    parsed = pd.to_datetime(str(value), errors="coerce")
+    if pd.isna(parsed):
+        raise ValueError(f"unparseable harvest_date: {value!r}")
+    return parsed.date()
 
 
 def _opt(v):
@@ -58,6 +65,20 @@ def _coerce_row(row: dict) -> LotRecord:
         variety=None if pd.isna(row.get(schema.VARIETY)) else _opt(row.get(schema.VARIETY)),
         extra=extra,
     )
+
+
+def normalize_canonical(df: pd.DataFrame, return_errors: bool = False):
+    """Validate an already-canonical DataFrame (no column matching).
+
+    Used by the analyze flow, which only accepts files that have been through
+    the formatter. Raises IngestError listing any missing required columns so
+    the UI can tell the user to format the file first.
+    """
+    missing = [c for c in schema.REQUIRED_COLUMNS if c not in df.columns]
+    if missing:
+        raise IngestError(
+            "not formatted — missing required column(s): " + ", ".join(missing))
+    return normalize(df, {c: c for c in df.columns}, return_errors=return_errors)
 
 
 def normalize(df: pd.DataFrame, mapping: dict, return_errors: bool = False):

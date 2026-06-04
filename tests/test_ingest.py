@@ -2,12 +2,30 @@ import io
 from datetime import date
 import pandas as pd
 import pytest
-from monkeyface.ingest import load_table, normalize, IngestError
+from monkeyface.ingest import load_table, normalize, normalize_canonical, IngestError
 from monkeyface import schema
 
 
 def _df(rows):
     return pd.DataFrame(rows)
+
+
+def test_blank_harvest_date_is_flagged_not_crashing():
+    df = _df([
+        {"lot_id": "L1", "field_id": "F1", "lat": 36.9, "lon": -121.7, "harvest_date": "2024-05-01"},
+        {"lot_id": "L2", "field_id": "F2", "lat": 36.9, "lon": -121.7, "harvest_date": ""},
+    ])
+    records, errors = normalize_canonical(df, return_errors=True)
+    assert len(records) == 1                      # the blank-date row dropped
+    assert records[0].lot_id == "L1"
+    assert any("harvest_date" in e for e in errors)
+
+
+def test_normalize_canonical_rejects_missing_required():
+    df = _df([{"lot_id": "L1", "field_id": "F1", "lat": 36.9}])  # no lon/harvest_date
+    with pytest.raises(IngestError) as ei:
+        normalize_canonical(df)
+    assert "not formatted" in str(ei.value).lower()
 
 
 def test_normalize_maps_messy_columns():
