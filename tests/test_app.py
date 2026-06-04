@@ -22,20 +22,37 @@ def test_index_served():
     assert "monkeyface" in resp.text.lower()
 
 
-def test_format_endpoint_normalizes_messy_file():
-    # Messy headers that the formatter should map to canonical columns.
-    csv = (b"Lot #,Ranch,Latitude,Longitude,Pick Date,Grower\n"
-           b"L1,North,36.9,-121.7,05/20/2024,Acme\n"
-           b"L2,South,34.9,-120.4,06/03/2024,Acme\n")
-    resp = client.post("/api/format",
-                       files={"files": ("raw.csv", csv, "text/csv")})
+def test_format_endpoint_normalizes_and_unifies():
+    # Messy headers, two files, that the formatter should map + merge.
+    a = (b"Lot #,Ranch,Latitude,Longitude,Pick Date,Grower\n"
+         b"L1,North,36.9,-121.7,05/20/2024,Acme\n")
+    b = (b"Lot #,Ranch,Latitude,Longitude,Pick Date,Grower\n"
+         b"L2,South,34.9,-120.4,06/03/2024,Acme\n")
+    resp = client.post("/api/format", files=[
+        ("files", ("a.csv", a, "text/csv")),
+        ("files", ("b.csv", b, "text/csv")),
+    ])
     assert resp.status_code == 200
-    f = resp.json()["files"][0]
-    assert f["ok"] is True
-    assert f["report"]["rows_out"] == 2
-    clean = base64.b64decode(f["csv_b64"]).decode()
+    body = resp.json()
+    assert body["ok"] is True
+    assert body["file_count"] == 2
+    assert body["total_rows"] == 2
+    clean = base64.b64decode(body["csv_b64"]).decode()
     header = clean.splitlines()[0].split(",")
     assert "lot_id" in header and "harvest_date" in header and "lat" in header
+
+
+def test_format_endpoint_blocks_on_true_conflict():
+    a = b"lot_id,field_id,lat,lon,harvest_date\nL1,North,36.9,-121.7,2024-05-20\n"
+    b = b"lot_id,field_id,lat,lon,harvest_date\nL1,SOUTH,34.9,-120.4,2024-06-03\n"
+    resp = client.post("/api/format", files=[
+        ("files", ("a.csv", a, "text/csv")),
+        ("files", ("b.csv", b, "text/csv")),
+    ])
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["ok"] is False
+    assert body["conflicts"][0]["lot_id"] == "L1"
 
 
 def test_format_endpoint_reports_unformattable_file():
@@ -43,9 +60,10 @@ def test_format_endpoint_reports_unformattable_file():
     resp = client.post("/api/format",
                        files={"files": ("junk.csv", csv, "text/csv")})
     assert resp.status_code == 200
-    f = resp.json()["files"][0]
-    assert f["ok"] is False
-    assert "required" in f["error"].lower()
+    body = resp.json()
+    assert body["ok"] is False
+    bad = [f for f in body["per_file"] if not f["ok"]][0]
+    assert "required" in bad["error"].lower()
 
 
 def test_analyze_accepts_canonical_file():

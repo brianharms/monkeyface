@@ -49,28 +49,48 @@
         can tell whether a bad season could have been seen coming, and which suppliers to watch.
       </p>
       <p class="intro__how">
-        <strong>How it works:</strong> first <em>format</em> your field exports into one clean
-        layout, then <em>analyze</em> them &mdash; the tool pulls each field's actual weather
+        <strong>How it works &mdash; two steps:</strong>
+        <strong>(1) Normalize &amp; unify</strong> all your field exports into one clean master file,
+        then <strong>(2) analyze</strong> it &mdash; the tool pulls each field's actual weather
         automatically and finds the patterns. No weather data needed on your end.
       </p>
       <span id="banner" class="sim">Data: Simulated</span>
     </section>
 
     <div class="mode-switch" role="tablist">
-      <button class="mode-tab is-active" id="tabAnalyze" role="tab">Analyze</button>
-      <button class="mode-tab" id="tabFormat" role="tab">Format files</button>
+      <button class="mode-tab is-active" id="tabFormat" role="tab">Step 1 · Normalize &amp; unify</button>
+      <button class="mode-tab" id="tabAnalyze" role="tab">Step 2 · Analyze</button>
     </div>
 
-    <!-- ANALYZE MODE -->
-    <section class="panel panel--upload" id="analyzeMode">
+    <!-- STEP 1: NORMALIZE & UNIFY -->
+    <section class="panel panel--upload" id="formatMode">
+      <div class="step__head"><span class="step__num">1</span>
+        <span class="step__title">Normalize &amp; unify your field exports</span></div>
+      <div class="step__body">
+        <p class="step__hint">Select <strong>all</strong> your raw spreadsheets at once
+          (CSV or Excel) &mdash; different growers, seasons, and messy column names are fine.
+          We clean each one and merge them into a single master file you can analyze. Each lot
+          must have a unique ID; if the same lot appears in two files with different data, we'll
+          ask you to resolve it before merging.</p>
+        <div class="upload-row">
+          <input type="file" id="formatFiles" accept=".csv,.xlsx,.xls" multiple>
+          <button id="runFormat" disabled>Normalize &amp; unify</button>
+        </div>
+        <div id="formatStatus"></div>
+        <div id="formatResults"></div>
+      </div>
+    </section>
+
+    <!-- STEP 2: ANALYZE -->
+    <section class="panel panel--upload" id="analyzeMode" hidden>
       <ol class="steps">
         <li class="step">
-          <div class="step__head"><span class="step__num">1</span>
-            <span class="step__title">Upload a formatted field file</span></div>
+          <div class="step__head"><span class="step__num">2</span>
+            <span class="step__title">Upload your unified field file</span></div>
           <div class="step__body">
-            <p class="step__hint">A formatted CSV (run raw exports through
-              <button type="button" class="link-button link-inline" id="goFormat">Format files</button>
-              first). One row per lot, with location and harvest date.</p>
+            <p class="step__hint">The master CSV from
+              <button type="button" class="link-button link-inline" id="goFormat">Step 1</button>.
+              One row per lot, with location and harvest date.</p>
             <div class="upload-row">
               <input type="file" id="file" accept=".csv,.xlsx,.xls">
               <a id="fileLink" class="file-link" hidden target="_blank" rel="noopener">Open file</a>
@@ -79,7 +99,7 @@
         </li>
 
         <li class="step is-locked" id="step2">
-          <div class="step__head"><span class="step__num">2</span>
+          <div class="step__head"><span class="step__num">3</span>
             <span class="step__title">Run the analysis</span></div>
           <div class="step__body">
             <p class="step__hint">We'll fetch each field's weather and rank the conditions
@@ -89,23 +109,6 @@
           </div>
         </li>
       </ol>
-    </section>
-
-    <!-- FORMAT MODE -->
-    <section class="panel panel--upload" id="formatMode" hidden>
-      <div class="step__head"><span class="step__num">&#9881;</span>
-        <span class="step__title">Format raw exports into one clean layout</span></div>
-      <div class="step__body">
-        <p class="step__hint">Select one or many raw spreadsheets (CSV or Excel) &mdash; messy
-          column names are fine. We match each file to the standard columns, clean the rows, and
-          give you tidy files ready to analyze.</p>
-        <div class="upload-row">
-          <input type="file" id="formatFiles" accept=".csv,.xlsx,.xls" multiple>
-          <button id="runFormat" disabled>Format files</button>
-        </div>
-        <div id="formatStatus"></div>
-        <div id="formatResults"></div>
-      </div>
     </section>
 
     <div id="results" hidden>

@@ -54,3 +54,51 @@ def test_format_dataframe_raises_when_required_missing():
     df = pd.DataFrame([{"colA": 1, "colB": 2}])
     with pytest.raises(formatter.FormatError):
         formatter.format_dataframe(df)
+
+
+# ---- consolidation (Step 1: normalize + unify many files) ----
+
+def _csv(rows_header_and_lines: str) -> bytes:
+    return rows_header_and_lines.encode("utf-8")
+
+
+def test_consolidate_merges_multiple_files():
+    a = _csv("lot_id,field_id,lat,lon,harvest_date\nL1,N,36.9,-121.7,2024-05-20\n")
+    b = _csv("lot_id,field_id,lat,lon,harvest_date\nL2,S,34.9,-120.4,2024-06-03\n")
+    res = formatter.consolidate([(a, "a.csv"), (b, "b.csv")])
+    assert res["ok"] is True
+    assert res["file_count"] == 2
+    assert res["total_rows"] == 2
+    out = res["csv_bytes"].decode()
+    assert "L1" in out and "L2" in out
+
+
+def test_consolidate_dedupes_identical_rows_silently():
+    # Same lot_id, IDENTICAL data, in two files -> keep one, no conflict.
+    row = "lot_id,field_id,lat,lon,harvest_date\nL1,N,36.9,-121.7,2024-05-20\n"
+    res = formatter.consolidate([(_csv(row), "a.csv"), (_csv(row), "b.csv")])
+    assert res["ok"] is True
+    assert res["total_rows"] == 1
+    assert res["conflicts"] == []
+
+
+def test_consolidate_blocks_on_true_conflict():
+    # Same lot_id, DIFFERENT data -> blocking conflict, no master produced.
+    a = _csv("lot_id,field_id,lat,lon,harvest_date\nL1,North,36.9,-121.7,2024-05-20\n")
+    b = _csv("lot_id,field_id,lat,lon,harvest_date\nL1,South,34.9,-120.4,2024-06-03\n")
+    res = formatter.consolidate([(a, "a.csv"), (b, "b.csv")])
+    assert res["ok"] is False
+    assert "csv_bytes" not in res
+    assert res["conflicts"][0]["lot_id"] == "L1"
+    assert set(res["conflicts"][0]["files"]) == {"a.csv", "b.csv"}
+
+
+def test_consolidate_reports_unformattable_but_uses_the_rest():
+    good = _csv("lot_id,field_id,lat,lon,harvest_date\nL1,N,36.9,-121.7,2024-05-20\n")
+    junk = _csv("colA,colB\n1,2\n")
+    res = formatter.consolidate([(good, "good.csv"), (junk, "junk.csv")])
+    assert res["ok"] is True
+    assert res["total_rows"] == 1
+    per = {f["name"]: f for f in res["per_file"]}
+    assert per["good.csv"]["ok"] is True
+    assert per["junk.csv"]["ok"] is False

@@ -18,26 +18,18 @@ def index():
 
 @app.post("/api/format")
 async def format_files(files: list[UploadFile] = File(...)):
-    """Normalize a batch of raw spreadsheets to the canonical schema.
+    """Step 1: normalize a batch of raw spreadsheets AND merge into one file.
 
-    Each file is guessed, renamed, validated, and returned as clean CSV bytes
-    (base64) plus a per-file report. Files that can't be formatted are reported
-    with an error rather than failing the whole batch.
+    Each file is matched to the canonical schema and cleaned, then all rows are
+    consolidated into a single unified `master.csv`. lot_id is the primary key:
+    identical re-exports de-dupe silently; a true conflict (same lot_id, different
+    data) blocks the merge and is reported for the user to resolve.
     """
-    out = []
-    for f in files:
-        data = await f.read()
-        try:
-            csv_bytes, report = formatter.format_bytes(data, f.filename)
-            out.append({
-                "name": f.filename,
-                "ok": True,
-                "report": report,
-                "csv_b64": base64.b64encode(csv_bytes).decode("ascii"),
-            })
-        except Exception as e:  # noqa: BLE001 - per-file, reported not raised
-            out.append({"name": f.filename, "ok": False, "error": str(e)})
-    return {"files": out}
+    raw = [(await f.read(), f.filename) for f in files]
+    result = formatter.consolidate(raw)
+    if result.get("ok"):
+        result["csv_b64"] = base64.b64encode(result.pop("csv_bytes")).decode("ascii")
+    return result
 
 
 @app.post("/api/analyze")

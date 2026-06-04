@@ -18,6 +18,8 @@ function setMode(mode) {
 $("tabAnalyze").onclick = () => setMode("analyze");
 $("tabFormat").onclick = () => setMode("format");
 $("goFormat").onclick = () => setMode("format");
+// The real workflow starts at Step 1 (normalize & unify).
+setMode("format");
 
 // ---------------------------------------------------------------------------
 // Analyze flow: pick a formatted file -> unlock step 2 -> analyze
@@ -79,38 +81,67 @@ $("runFormat").onclick = async () => {
   const fd = new FormData();
   for (const f of files) fd.append("files", f);
   $("runFormat").disabled = true;
-  $("runFormat").textContent = "Formatting…";
-  $("formatStatus").textContent = `Formatting ${files.length} file${files.length === 1 ? "" : "s"}…`;
+  $("runFormat").textContent = "Working…";
+  $("formatStatus").textContent =
+    `Normalizing and unifying ${files.length} file${files.length === 1 ? "" : "s"}…`;
   const r = await fetch("/api/format", { method: "POST", body: fd });
   $("runFormat").disabled = false;
-  $("runFormat").textContent = "Format files";
-  if (!r.ok) { $("formatStatus").textContent = "Something went wrong formatting those files."; return; }
-  const { files: results } = await r.json();
-  renderFormatResults(results);
+  $("runFormat").innerHTML = "Normalize &amp; unify";
+  if (!r.ok) { $("formatStatus").textContent = "Something went wrong. Please try again."; return; }
+  renderFormatResults(await r.json());
 };
 
-function renderFormatResults(results) {
-  const ok = results.filter((r) => r.ok);
-  $("formatStatus").textContent =
-    `${ok.length} of ${results.length} file${results.length === 1 ? "" : "s"} formatted.` +
-    (ok.length ? " Download the clean files, then switch to Analyze." : "");
-  const rows = results.map((r) => {
-    if (!r.ok) {
+function renderFormatResults(res) {
+  // Per-file breakdown (what cleaned, what couldn't be read).
+  const fileRows = res.per_file.map((f) => {
+    if (!f.ok) {
       return `<div class="fmt-row fmt-row--bad">
-        <span class="fmt-name">${esc(r.name)}</span>
-        <span class="fmt-detail fmt-error">${esc(r.error)}</span></div>`;
+        <span class="fmt-name">${esc(f.name)}</span>
+        <span class="fmt-detail fmt-error">${esc(f.error)}</span></div>`;
     }
-    const rep = r.report;
-    const dropped = rep.dropped_bad_dates + rep.dropped_bad_coords + rep.dropped_duplicates;
-    const cleanName = r.name.replace(/\.(csv|xlsx?|xls)$/i, "") + "_formatted.csv";
-    const href = "data:text/csv;base64," + r.csv_b64;
-    const note = dropped ? ` · ${dropped} row${dropped === 1 ? "" : "s"} dropped` : "";
     return `<div class="fmt-row">
-      <span class="fmt-name">${esc(r.name)}</span>
-      <span class="fmt-detail">${rep.rows_out}/${rep.rows_in} rows${esc(note)}</span>
-      <a class="fmt-dl" href="${href}" download="${esc(cleanName)}">Download CSV</a></div>`;
+      <span class="fmt-name">${esc(f.name)}</span>
+      <span class="fmt-detail">${f.rows_out} row${f.rows_out === 1 ? "" : "s"} cleaned</span>
+      <span class="fmt-ok">✓</span></div>`;
   }).join("");
-  $("formatResults").innerHTML = `<div class="fmt-list">${rows}</div>`;
+  const fileList = `<div class="fmt-list">${fileRows}</div>`;
+
+  // Blocking conflicts: same lot in two files with different data.
+  if (res.conflicts && res.conflicts.length) {
+    const items = res.conflicts.map((c) =>
+      `<li><b>${esc(c.lot_id)}</b> appears in ${c.files.map(esc).join(", ")} with different data.</li>`
+    ).join("");
+    $("formatStatus").innerHTML =
+      `<span class="fmt-block">Couldn't merge &mdash; ${res.conflicts.length} ` +
+      `lot ID${res.conflicts.length === 1 ? "" : "s"} conflict across files.</span>`;
+    $("formatResults").innerHTML = fileList +
+      `<div class="fmt-conflict">
+        <p>Each lot must be unique. These appear in more than one file with
+           <em>different</em> values &mdash; fix them in your source files, then re-run:</p>
+        <ul>${items}</ul></div>`;
+    return;
+  }
+
+  if (!res.ok) {
+    $("formatStatus").textContent = "No files could be formatted. Check the column names.";
+    $("formatResults").innerHTML = fileList;
+    return;
+  }
+
+  // Success: one unified master file to download.
+  const href = "data:text/csv;base64," + res.csv_b64;
+  $("formatStatus").innerHTML =
+    `Unified <b>${res.total_rows}</b> lot${res.total_rows === 1 ? "" : "s"} from ` +
+    `<b>${res.file_count}</b> file${res.file_count === 1 ? "" : "s"} into one master file.`;
+  $("formatResults").innerHTML = fileList +
+    `<div class="fmt-master">
+      <a class="fmt-dl fmt-dl--master" href="${href}" download="master.csv">Download master.csv</a>
+      <button type="button" class="link-button" id="masterToAnalyze">Go to Step 2 · Analyze &rarr;</button>
+    </div>`;
+  $("masterToAnalyze").onclick = () => {
+    setMode("analyze");
+    $("analyzeMode").scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 }
 
 

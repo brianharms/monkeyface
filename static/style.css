@@ -171,11 +171,29 @@ body {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fmt-detail { color: var(--ink-2); font-size: 12px; white-space: nowrap; }
 .fmt-error { color: var(--red); font-weight: 600; }
+.fmt-ok { color: var(--ok); font-weight: 700; text-align: right; }
 .fmt-dl {
   font-size: 12.5px; font-weight: 600; color: #fff; background: var(--navy);
   padding: 6px 12px; border-radius: var(--radius-sm); text-decoration: none; white-space: nowrap;
 }
 .fmt-dl:hover { background: var(--navy-700); }
+
+.fmt-block { color: var(--red); font-weight: 700; }
+.fmt-conflict {
+  margin-top: 12px; max-width: 620px; padding: 14px 16px;
+  background: var(--red-tint); border: 1px solid #f0c6cb; border-radius: var(--radius-sm);
+  font-size: 13px; color: var(--ink);
+}
+.fmt-conflict p { margin-bottom: 8px; }
+.fmt-conflict ul { margin: 0 0 0 18px; }
+.fmt-conflict li { margin-bottom: 4px; }
+.fmt-conflict b { color: var(--red); font-family: var(--mono); }
+
+.fmt-master {
+  display: flex; align-items: center; gap: 18px; margin-top: 14px;
+}
+.fmt-dl--master { background: var(--red); font-size: 13.5px; padding: 9px 18px; }
+.fmt-dl--master:hover { background: var(--red-600); }
 
 /* ---------- Stepped flow ---------- */
 .steps { list-style: none; }
