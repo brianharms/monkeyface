@@ -29,9 +29,9 @@ $("loadCols").onclick = async () => {
   if (!r.ok) { $("status").textContent = "Sorry — we couldn't read that file. Is it a CSV or Excel file?"; return; }
   const { columns } = await r.json();
   buildMapping(columns);
-  // Reveal steps 2 and 3 now that there's something to map and run.
-  $("step2").hidden = false;
-  $("step3").hidden = false;
+  // Unlock steps 2 and 3 now that there's something to map and run.
+  $("step2").classList.remove("is-locked");
+  $("step3").classList.remove("is-locked");
   $("run").disabled = false;
   $("step2").scrollIntoView({ behavior: "smooth", block: "nearest" });
 };

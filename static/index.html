@@ -23,8 +23,11 @@
   <header class="site-header">
     <div class="site-header__inner">
       <div class="brand">
-        <img class="brand__logo" src="/static/assets/titan-mark.png"
-             alt="Titan Frozen Fruit">
+        <a class="brand__link" href="https://titanfrozen.com/" target="_blank"
+           rel="noopener noreferrer" title="Visit Titan Frozen Fruit">
+          <img class="brand__logo" src="/static/assets/titan-mark.png"
+               alt="Titan Frozen Fruit">
+        </a>
         <div class="brand__divider"></div>
         <div class="brand__app">
           <span class="brand__app-name">Project Monkeyface</span>
@@ -68,7 +71,7 @@
           </div>
         </li>
 
-        <li class="step" id="step2" hidden>
+        <li class="step is-locked" id="step2">
           <div class="step__head"><span class="step__num">2</span>
             <span class="step__title">Match your columns</span></div>
           <div class="step__body">
@@ -81,7 +84,7 @@
           </div>
         </li>
 
-        <li class="step" id="step3" hidden>
+        <li class="step is-locked" id="step3">
           <div class="step__head"><span class="step__num">3</span>
             <span class="step__title">Run the analysis</span></div>
           <div class="step__body">
@@ -136,6 +139,12 @@
       </div>
     </div>
   </div>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      Made by Claude Code and Jennifer Urbina
+    </div>
+  </footer>
 
   <script src="/static/app.js"></script>
 </body>

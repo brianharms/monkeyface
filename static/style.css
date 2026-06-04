@@ -48,7 +48,7 @@ body {
   min-height: 100vh;
 }
 
-.wrap { max-width: 1320px; margin: 0 auto; padding: 0 28px 56px; }
+.wrap { max-width: 1200px; margin: 0 auto; padding: 0 28px 56px; }
 
 /* ---------- Header ---------- */
 .site-header {
@@ -58,13 +58,14 @@ body {
   position: sticky; top: 0; z-index: 500;
 }
 .site-header__inner {
-  max-width: 1320px; margin: 0 auto;
+  max-width: 1200px; margin: 0 auto;
   padding: 14px 28px;
   display: flex; align-items: center; gap: 20px;
 }
 .brand { display: flex; align-items: center; gap: 16px; }
-.brand__logo { height: 56px; width: auto; display: block; }
-.brand__divider { width: 1px; height: 42px; background: var(--border-strong); }
+.brand__logo { height: 34px; width: auto; display: block; }
+.brand__link { display: inline-flex; align-items: center; line-height: 0; }
+.brand__divider { width: 1px; height: 30px; background: var(--border-strong); }
 .brand__app {
   display: flex; flex-direction: column; gap: 1px;
 }
@@ -147,6 +148,12 @@ body {
 .step__body { padding-left: 40px; }   /* align body under the title, past the number */
 .step__hint { color: var(--ink-2); font-size: 13px; line-height: 1.5; margin: 0 0 12px; max-width: 640px; }
 
+/* Locked (not-yet-available) step: visible but greyed out and non-interactive. */
+.step.is-locked { opacity: .45; }
+.step.is-locked .step__num { background: var(--ink-3); }
+.step.is-locked .step__title { color: var(--ink-2); }
+.step.is-locked .step__body { pointer-events: none; filter: grayscale(0.35); }
+
 /* ---------- Mapping header + arrows ---------- */
 .mapping-head {
   display: grid; grid-template-columns: 150px 24px 1fr; align-items: center; gap: 12px;
@@ -170,6 +177,7 @@ body {
 
 /* ---------- Upload / controls ---------- */
 .upload-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.upload-row #loadCols { margin-left: auto; }
 input[type="file"] {
   font-size: 13px; color: var(--ink-2);
 }
@@ -279,3 +287,14 @@ td.weak       { color: var(--ink-3); }
 .leaflet-popup-content-wrapper { border-radius: 10px; box-shadow: var(--shadow); }
 .leaflet-popup-content { font-family: var(--font); font-size: 12.5px; color: var(--ink); }
 .leaflet-popup-content b { color: var(--navy); }
+
+/* ---------- Footer ---------- */
+.site-footer {
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+}
+.site-footer__inner {
+  max-width: 1200px; margin: 0 auto; padding: 20px 28px 28px;
+  text-align: center;
+  font-size: 11.5px; color: var(--ink-3); letter-spacing: .03em;
+}
