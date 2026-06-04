@@ -73,14 +73,18 @@
 
         <li class="step is-locked" id="step2">
           <div class="step__head"><span class="step__num">2</span>
-            <span class="step__title">Match your columns</span></div>
+            <span class="step__title">Confirm your columns</span></div>
           <div class="step__body">
-            <p class="step__hint">Tell us which of <em>your</em> spreadsheet columns is which.
-              We've guessed &mdash; just fix anything that's wrong.</p>
-            <div class="mapping-head">
-              <span>Your column</span><span class="mapping-head__arrow">&rarr;</span><span>We'll read it as</span>
+            <p class="step__hint">We matched your spreadsheet columns automatically.
+              Review the matches below &mdash; you only need to step in if something looks off.</p>
+            <div id="mapSummary" class="map-summary"></div>
+            <button type="button" id="toggleMapping" class="link-button" hidden>Fix matches&nbsp;&darr;</button>
+            <div id="mappingEditor" hidden>
+              <div class="mapping-head">
+                <span>We'll read it as</span><span class="mapping-head__arrow">&rarr;</span><span>Your column</span>
+              </div>
+              <div id="mapping" class="mapping-grid"></div>
             </div>
-            <div id="mapping" class="mapping-grid"></div>
           </div>
         </li>
 

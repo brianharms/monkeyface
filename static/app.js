@@ -29,6 +29,7 @@ $("loadCols").onclick = async () => {
   if (!r.ok) { $("status").textContent = "Sorry — we couldn't read that file. Is it a CSV or Excel file?"; return; }
   const { columns } = await r.json();
   buildMapping(columns);
+  renderMapSummary();
   // Unlock steps 2 and 3 now that there's something to map and run.
   $("step2").classList.remove("is-locked");
   $("step3").classList.remove("is-locked");
@@ -37,35 +38,89 @@ $("loadCols").onclick = async () => {
 };
 
 function guess(col) {
-  const c = col.toLowerCase();
+  const c = col.toLowerCase().trim();
+  // exact-name match first (strongest signal)
+  if (CANONICAL.includes(c)) return c;
+  if (c === "longitude") return "lon";
+  if (c === "latitude") return "lat";
+  // fuzzy keyword match
   if (c.includes("lot")) return "lot_id";
-  if (c.includes("field")) return "field_id";
+  if (c.includes("field") || c.includes("ranch") || c.includes("block")) return "field_id";
   if (c.startsWith("lat")) return "lat";
-  if (c.startsWith("lon") || c.includes("lng")) return "lon";
-  if (c.includes("harv") || c.includes("date")) return "harvest_date";
-  if (c.includes("defect")) return "defect_rate";
-  if (c.includes("grow")) return "grower";
-  if (c.includes("variet")) return "variety";
+  if (c.startsWith("lon") || c.includes("lng") || c.includes("long")) return "lon";
+  if (c.includes("harv") || c.includes("date") || c.includes("pick")) return "harvest_date";
+  if (c.includes("defect") || c.includes("catface") || c.includes("monkey")) return "defect_rate";
+  if (c.includes("grow") || c.includes("supplier") || c.includes("vendor")) return "grower";
+  if (c.includes("variet") || c.includes("cultivar")) return "variety";
   return "";
 }
 
+// Build the (hidden by default) editable dropdown rows, one per source column.
 function buildMapping(columns) {
   const html = columns.map((col) => {
-    const opts = ['<option value="">— ignore this column —</option>']
+    const opts = ['<option value="">— don’t use this column —</option>']
       .concat(CANONICAL.map((cn) =>
         `<option value="${cn}" ${guess(col) === cn ? "selected" : ""}>${CANONICAL_LABELS[cn]}</option>`))
       .join("");
-    return `<div class="mapping-row"><label title="${esc(col)}">${esc(col)}</label>
-            <span class="mapping-row__arrow">&rarr;</span>
+    return `<div class="mapping-row">
+            <span class="mapping-row__src" title="${esc(col)}">${esc(col)}</span>
+            <span class="mapping-row__arrow">&larr;</span>
             <select data-src="${esc(col)}">${opts}</select></div>`;
   }).join("");
   $("mapping").innerHTML = html;
+  // Keep the summary live as the user edits matches.
+  $("mapping").querySelectorAll("select").forEach((s) => { s.onchange = renderMapSummary; });
 }
+
+// Read the current mapping (canonical field -> source column) from the editor.
+function currentMapping() {
+  const m = {};
+  $("mapping").querySelectorAll("select").forEach((s) => {
+    if (s.value) m[s.value] = s.dataset.src;   // canonical -> source column
+  });
+  return m;
+}
+
+const REQUIRED_FIELDS = ["lot_id", "field_id", "lat", "lon", "harvest_date"];
+
+// Render the plain, stacked "Field  →  your column" summary.
+function renderMapSummary() {
+  const m = currentMapping();
+  let missing = 0;
+  const rows = CANONICAL.map((cn) => {
+    const src = m[cn];
+    const required = REQUIRED_FIELDS.includes(cn);
+    if (!src && required) missing++;
+    const val = src
+      ? `<span class="ms-col">${esc(src)}</span>`
+      : required
+      ? `<span class="ms-missing">not found &mdash; please fix</span>`
+      : `<span class="ms-none">not provided</span>`;
+    if (!src && !required) return "";   // hide optional-and-absent fields from the summary
+    return `<div class="ms-row${!src && required ? " ms-row--bad" : ""}">
+              <span class="ms-label">${CANONICAL_LABELS[cn]}${required ? "" : " <em>(optional)</em>"}</span>
+              <span class="ms-arrow">&rarr;</span>${val}</div>`;
+  }).join("");
+  $("mapSummary").innerHTML = rows;
+  $("toggleMapping").hidden = false;
+  // Block running until every required field is matched.
+  $("run").disabled = missing > 0;
+  $("status").textContent = missing > 0
+    ? `${missing} required column${missing === 1 ? "" : "s"} couldn't be matched — click "Fix matches" to set ${missing === 1 ? "it" : "them"}.`
+    : "";
+}
+
+$("toggleMapping").onclick = () => {
+  const ed = $("mappingEditor");
+  ed.hidden = !ed.hidden;
+  $("toggleMapping").innerHTML = ed.hidden ? "Fix matches&nbsp;&darr;" : "Done editing&nbsp;&uarr;";
+};
 
 $("run").onclick = async () => {
   const f = $("file").files[0];
+  // Backend expects { sourceColumn: canonicalField } (df.rename mapping).
   const mapping = {};
-  document.querySelectorAll("#mapping select").forEach((s) => {
+  $("mapping").querySelectorAll("select").forEach((s) => {
     if (s.value) mapping[s.dataset.src] = s.value;
   });
   const fd = new FormData();
@@ -208,12 +263,12 @@ function renderScatter(lots, factorName) {
     marker: { size: 11, color: "#bc2133", line: { color: "#ffffff", width: 1.5 } },
     text: lots.map((l) => l.field_id),
     hovertemplate: "%{text}<br>" + factorLabel(factorName) + ": %{x}<br>defect: %{y:.1f}%<extra></extra>",
-  }], { paper_bgcolor: "#ffffff", plot_bgcolor: "#ffffff",
+  }], { paper_bgcolor: "#ffffff", plot_bgcolor: "#ffffff", autosize: true,
         font: { color: "#4a5d6e", family: "Inter, sans-serif" },
         margin: { t: 14, r: 14, b: 52, l: 56 },
         xaxis: { title: factorLabel(factorName), gridcolor: "#eef1f4", zerolinecolor: "#dde3e9" },
         yaxis: { title: "defect rate (%)", gridcolor: "#eef1f4", zerolinecolor: "#dde3e9" } },
-    { displayModeBar: false });
+    { displayModeBar: false, responsive: true });
 }
 
 function renderWeather(lot) {
@@ -226,7 +281,7 @@ function renderWeather(lot) {
       type: "scatter", line: { color: "#bc2133", width: 2 } },
     { x: d, y: lot.weather.map((w) => w.precip_mm), name: "precip mm",
       type: "bar", marker: { color: "#9cc2dd" }, yaxis: "y2", opacity: 0.85 },
-  ], { paper_bgcolor: "#ffffff", plot_bgcolor: "#ffffff",
+  ], { paper_bgcolor: "#ffffff", plot_bgcolor: "#ffffff", autosize: true,
        font: { color: "#4a5d6e", family: "Inter, sans-serif" },
        margin: { t: 64, r: 52, b: 40, l: 52 },
        title: { text: `${lot.field_id} · bloom window`,
@@ -237,5 +292,5 @@ function renderWeather(lot) {
        yaxis: { title: "°C", gridcolor: "#eef1f4", zerolinecolor: "#dde3e9" },
        yaxis2: { title: "mm", overlaying: "y", side: "right",
                  gridcolor: "rgba(0,0,0,0)" } },
-     { displayModeBar: false });
+     { displayModeBar: false, responsive: true });
 }
