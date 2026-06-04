@@ -76,16 +76,20 @@ function render(res) {
 let map, layer;
 function renderMap(lots) {
   if (!map) { map = L.map("map").setView([34, -119], 5);
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
       { attribution: "© OpenStreetMap © CARTO" }).addTo(map); }
   if (layer) map.removeLayer(layer);
   layer = L.layerGroup().addTo(map);
   const max = Math.max(...lots.map((l) => l.defect_rate || 0), 0.0001);
   lots.forEach((l) => {
     const t = (l.defect_rate || 0) / max;
-    const color = `rgb(${Math.round(120 + 135 * t)},${Math.round(180 - 140 * t)},90)`;
-    L.circleMarker([l.lat, l.lon], { radius: 8, color, fillColor: color,
-      fillOpacity: 0.8 })
+    // low defect = Titan navy, high defect = strawberry red
+    const r = Math.round(6 + (188 - 6) * t);
+    const g = Math.round(42 + (33 - 42) * t);
+    const b = Math.round(70 + (51 - 70) * t);
+    const color = `rgb(${r},${g},${b})`;
+    L.circleMarker([l.lat, l.lon], { radius: 9, color: "#ffffff", weight: 2,
+      fillColor: color, fillOpacity: 0.92 })
       .bindPopup(`<b>${esc(l.field_id)}</b><br>lot ${esc(l.lot_id)}<br>` +
                  `defect ${(100 * (l.defect_rate || 0)).toFixed(1)}%`)
       .on("click", () => renderWeather(l))
@@ -124,11 +128,13 @@ function renderScatter(lots, factorName) {
   const y = lots.map((l) => 100 * (l.defect_rate || 0));
   Plotly.newPlot("scatter", [{
     x, y, mode: "markers", type: "scatter",
-    marker: { size: 9, color: "#2d7ff9" },
+    marker: { size: 11, color: "#bc2133", line: { color: "#ffffff", width: 1.5 } },
     text: lots.map((l) => l.field_id),
-  }], { paper_bgcolor: "#15181d", plot_bgcolor: "#15181d",
-        font: { color: "#e6e8ea" }, margin: { t: 10, r: 10 },
-        xaxis: { title: factorName }, yaxis: { title: "defect %" } },
+  }], { paper_bgcolor: "#ffffff", plot_bgcolor: "#ffffff",
+        font: { color: "#4a5d6e", family: "Inter, sans-serif" },
+        margin: { t: 14, r: 14, b: 46, l: 52 },
+        xaxis: { title: factorName, gridcolor: "#eef1f4", zerolinecolor: "#dde3e9" },
+        yaxis: { title: "defect %", gridcolor: "#eef1f4", zerolinecolor: "#dde3e9" } },
     { displayModeBar: false });
 }
 
@@ -137,15 +143,21 @@ function renderWeather(lot) {
   const d = lot.weather.map((w) => w.date);
   Plotly.newPlot("weather", [
     { x: d, y: lot.weather.map((w) => w.t2m_min), name: "T min",
-      type: "scatter", line: { color: "#74b9ff" } },
+      type: "scatter", line: { color: "#114a72", width: 2 } },
     { x: d, y: lot.weather.map((w) => w.t2m_max), name: "T max",
-      type: "scatter", line: { color: "#ff7675" } },
+      type: "scatter", line: { color: "#bc2133", width: 2 } },
     { x: d, y: lot.weather.map((w) => w.precip_mm), name: "precip mm",
-      type: "bar", marker: { color: "#55efc4" }, yaxis: "y2" },
-  ], { paper_bgcolor: "#15181d", plot_bgcolor: "#15181d",
-       font: { color: "#e6e8ea" }, margin: { t: 24 },
-       title: `${lot.field_id} bloom window`,
-       yaxis: { title: "°C" },
-       yaxis2: { title: "mm", overlaying: "y", side: "right" } },
+      type: "bar", marker: { color: "#9cc2dd" }, yaxis: "y2", opacity: 0.85 },
+  ], { paper_bgcolor: "#ffffff", plot_bgcolor: "#ffffff",
+       font: { color: "#4a5d6e", family: "Inter, sans-serif" },
+       margin: { t: 64, r: 52, b: 40, l: 52 },
+       title: { text: `${lot.field_id} · bloom window`,
+                font: { color: "#062a46", size: 14 }, x: 0, xanchor: "left",
+                y: 0.97, yanchor: "top" },
+       legend: { orientation: "h", y: 1.08, x: 1, xanchor: "right" },
+       xaxis: { gridcolor: "#eef1f4", zerolinecolor: "#dde3e9" },
+       yaxis: { title: "°C", gridcolor: "#eef1f4", zerolinecolor: "#dde3e9" },
+       yaxis2: { title: "mm", overlaying: "y", side: "right",
+                 gridcolor: "rgba(0,0,0,0)" } },
      { displayModeBar: false });
 }
