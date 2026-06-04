@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>monkeyface — Titan Frozen Fruit · defect risk explorer</title>
+  <title>Project Monkeyface — Titan Frozen Fruit · defect risk explorer</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
@@ -23,11 +23,11 @@
   <header class="site-header">
     <div class="site-header__inner">
       <div class="brand">
-        <img class="brand__logo" src="/static/assets/titan-logo-tagline.png"
+        <img class="brand__logo" src="/static/assets/titan-mark.png"
              alt="Titan Frozen Fruit">
         <div class="brand__divider"></div>
         <div class="brand__app">
-          <span class="brand__app-name">monkeyface</span>
+          <span class="brand__app-name">Project Monkeyface</span>
           <span class="brand__app-sub">Defect Risk Explorer</span>
         </div>
       </div>
@@ -38,50 +38,102 @@
 
   <div class="wrap">
     <section class="intro">
-      <h1>Monkey-face / cat-face risk explorer</h1>
-      <p>Pull the real weather each strawberry field experienced during its bloom window,
-         rank the conditions that drive the defect, and see whether this season's spike
-         was foreseeable.</p>
+      <h1>Which weather conditions cause the strawberry defect?</h1>
+      <p class="intro__lead">
+        Strawberries sometimes grow deformed &mdash; a defect called <strong>monkey-face</strong>
+        (or cat-face). This tool checks the real weather each field experienced while its fruit
+        was forming, then shows which conditions line up with more defects &mdash; so you can tell
+        whether a bad season could have been seen coming, and which suppliers to watch.
+      </p>
+      <p class="intro__how">
+        <strong>How it works:</strong> you give it a spreadsheet of fields (where and when each
+        was harvested); it pulls that field's actual weather automatically and finds the patterns.
+        No weather data needed on your end.
+      </p>
       <span id="banner" class="sim">Data: Simulated</span>
     </section>
 
     <section class="panel panel--upload">
-      <div class="panel__title">1 · Upload field data</div>
-      <div class="upload-row">
-        <input type="file" id="file" accept=".csv,.xlsx,.xls">
-        <button id="loadCols">Load columns</button>
-        <span style="font-size:12.5px;color:var(--ink-3);">CSV / Excel — lot, field, lat, lon, harvest date</span>
+      <ol class="steps">
+        <li class="step">
+          <div class="step__head"><span class="step__num">1</span>
+            <span class="step__title">Upload your field data</span></div>
+          <div class="step__body">
+            <p class="step__hint">A CSV or Excel file with one row per lot &mdash; including the
+              field's location (latitude &amp; longitude) and its harvest date.</p>
+            <div class="upload-row">
+              <input type="file" id="file" accept=".csv,.xlsx,.xls">
+              <button id="loadCols">Continue&nbsp;&rarr;</button>
+            </div>
+          </div>
+        </li>
+
+        <li class="step" id="step2" hidden>
+          <div class="step__head"><span class="step__num">2</span>
+            <span class="step__title">Match your columns</span></div>
+          <div class="step__body">
+            <p class="step__hint">Tell us which of <em>your</em> spreadsheet columns is which.
+              We've guessed &mdash; just fix anything that's wrong.</p>
+            <div class="mapping-head">
+              <span>Your column</span><span class="mapping-head__arrow">&rarr;</span><span>We'll read it as</span>
+            </div>
+            <div id="mapping" class="mapping-grid"></div>
+          </div>
+        </li>
+
+        <li class="step" id="step3" hidden>
+          <div class="step__head"><span class="step__num">3</span>
+            <span class="step__title">Run the analysis</span></div>
+          <div class="step__body">
+            <p class="step__hint">We'll fetch each field's weather and rank the conditions
+              driving the defect. The first run takes a few seconds.</p>
+            <button id="run" disabled>Analyze fields</button>
+            <div id="status"></div>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <div id="results" hidden>
+      <p class="results-intro">Here's what the analysis found &mdash; explore the panels below.</p>
+
+      <div class="map-row">
+        <section class="panel">
+          <div class="panel__title">Where your fields are</div>
+          <p class="panel__sub">Each dot is a field, placed at its real location and colored by
+            its defect rate &mdash; <span class="legend-navy">navy = low</span>,
+            <span class="legend-red">red = high</span>. Click a dot to see its weather below.</p>
+          <div id="map"></div>
+        </section>
+        <section class="panel">
+          <div class="panel__title">What's driving the defect</div>
+          <p class="panel__sub">Weather conditions ranked by how strongly they line up with more
+            defects. Hover a column heading for the statistical detail.</p>
+          <div id="factors"></div>
+        </section>
       </div>
-      <div id="mapping" class="mapping-grid"></div>
-      <button id="run" style="margin-top:16px;" disabled>Run analysis</button>
-      <div id="status"></div>
-    </section>
 
-    <div class="map-row">
       <section class="panel">
-        <div class="panel__title">Fields</div>
-        <div id="map"></div>
+        <div class="panel__title">Could we have seen the spike coming?</div>
+        <p class="panel__sub">Whether the worst year's weather was unusual in the conditions that
+          matter &mdash; a check on whether the defect was foreseeable.</p>
+        <div id="spike"></div>
       </section>
-      <section class="panel">
-        <div class="panel__title">Factor ranking</div>
-        <div id="factors"></div>
-      </section>
-    </div>
 
-    <section class="panel">
-      <div class="panel__title">Could we have seen the spike?</div>
-      <div id="spike"></div>
-    </section>
-
-    <div class="grid">
-      <section class="panel">
-        <div class="panel__title">Defect vs. factor</div>
-        <div id="scatter"></div>
-      </section>
-      <section class="panel">
-        <div class="panel__title">Weather · selected field's bloom window</div>
-        <div id="weather"></div>
-      </section>
+      <div class="grid">
+        <section class="panel">
+          <div class="panel__title">Defect rate vs. the top condition</div>
+          <p class="panel__sub">Each field plotted: the leading weather condition (across) against
+            its defect rate (up). A rising trend means that condition tracks the defect.</p>
+          <div id="scatter"></div>
+        </section>
+        <section class="panel">
+          <div class="panel__title">A field's weather, day by day</div>
+          <p class="panel__sub">The actual temperatures and rainfall during the selected field's
+            fruit-forming window. Click a dot on the map to change the field.</p>
+          <div id="weather"></div>
+        </section>
+      </div>
     </div>
   </div>
 
