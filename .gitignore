@@ -6,3 +6,4 @@ venv/
 weather_cache/
 .pytest_cache/
 .DS_Store
+SESSION_LOG.md
