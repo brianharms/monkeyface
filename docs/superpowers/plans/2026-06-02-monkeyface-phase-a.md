@@ -158,7 +158,7 @@ PORT = 8000
 - [ ] **Step 6: Commit**
 
 ```bash
-cd ~/Desktop/Claude\ Projects/monkeyface
+cd ~/Projects/monkeyface
 git add .gitignore requirements.txt pytest.ini monkeyface/__init__.py config.py
 git commit -m "chore: project scaffolding and config"
 ```
@@ -299,7 +299,7 @@ def test_load_table_reads_csv_bytes():
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `cd ~/Desktop/Claude\ Projects/monkeyface && python -m pytest tests/test_ingest.py -v`
+Run: `cd ~/Projects/monkeyface && python -m pytest tests/test_ingest.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'monkeyface.ingest'`
 
 - [ ] **Step 3: Write `monkeyface/ingest.py`**
@@ -1591,7 +1591,7 @@ function renderWeather(lot) {
 
 - [ ] **Step 5: Manual verification (browser)**
 
-Run: `cd ~/Desktop/Claude\ Projects/monkeyface && ./run.sh` (created in Task 10). Then:
+Run: `cd ~/Projects/monkeyface && ./run.sh` (created in Task 10). Then:
 1. Open `http://localhost:8000`.
 2. Upload `sample_data/fields_sample.csv`, click "Load columns" → mapping dropdowns auto-guess.
 3. Click "Run analysis". First run pulls real NASA POWER weather (slower); re-runs are cached.
